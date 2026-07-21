@@ -1,14 +1,20 @@
 # HA EV Charge – Halo & Nord Pool
 
-Home Assistant-projekt för att styra elbilsladdning med en Halo-laddbox utifrån elpriser från Nord Pool.
+Home Assistant-projekt för att planera och styra elbilsladdning med en
+OCPP-ansluten Charge Amps Halo utifrån elpriser från Nord Pool.
 
 ## Status
 
-Första versionen innehåller en Home Assistant-blueprint för prisstyrd
-laddning med hysteres, huvudbrytare och fail-safe vid saknat pris.
+Phase 2-designen använder separata dag- och nattplaner, sammanhängande
+15-minutersblock och OCPP-baserade start-/stoppsekvenser. Den tidigare enkla
+prisgräns-blueprinten finns kvar som prototyp och är inte den aktiva
+produktionsarkitekturen.
 
 Se [installationsguiden](docs/installation.md) för konfiguration och säker
 provkörning.
+
+Den fullständiga arkitekturen och implementationens källreferens finns under
+[`docs/design-reference`](docs/design-reference/AI_CONTEXT.md).
 
 ## Mål
 
