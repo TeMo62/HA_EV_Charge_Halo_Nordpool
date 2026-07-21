@@ -4,7 +4,11 @@ Home Assistant-projekt för att styra elbilsladdning med en Halo-laddbox utifrå
 
 ## Status
 
-Projektet är under utveckling. Dokumentation, konfiguration och automationer läggs till och verifieras stegvis.
+Första versionen innehåller en Home Assistant-blueprint för prisstyrd
+laddning med hysteres, huvudbrytare och fail-safe vid saknat pris.
+
+Se [installationsguiden](docs/installation.md) för konfiguration och säker
+provkörning.
 
 ## Mål
 
@@ -18,7 +22,7 @@ Projektet är under utveckling. Dokumentation, konfiguration och automationer l�
 
 ```text
 config/       Home Assistant-konfiguration och hjälpare
-automations/  Automationer för laddstyrning
+blueprints/   UI-konfigurerbara automationer för laddstyrning
 scripts/      Återanvändbara Home Assistant-skript
 docs/         Installation, konfiguration och felsökning
 tests/        Testfall och exempeldata där det är möjligt
