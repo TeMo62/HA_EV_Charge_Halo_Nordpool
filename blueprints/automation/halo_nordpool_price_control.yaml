@@ -1,0 +1,121 @@
+blueprint:
+  name: Halo – prisstyrd laddning med Nord Pool
+  description: >-
+    Startar och stoppar en Charge Amps Halo via dess laddningsswitch baserat
+    på Nord Pools aktuella pris. Två olika prisgränser ger hysteres och
+    förhindrar täta växlingar. En separat input_boolean används som
+    huvudbrytare för automatiken.
+  domain: automation
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    price_sensor:
+      name: Nord Pool – aktuellt pris
+      description: Sensorn för aktuellt pris, normalt i SEK/kWh.
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: monetary
+    charging_switch:
+      name: Halo – laddningsswitch
+      description: Switchen från Charge Amps-integrationen som tillåter laddning.
+      selector:
+        entity:
+          filter:
+            - domain: switch
+    automation_enabled:
+      name: Automatisk laddning aktiverad
+      description: En input_boolean som fungerar som huvudbrytare.
+      selector:
+        entity:
+          filter:
+            - domain: input_boolean
+    start_below:
+      name: Starta vid eller under
+      description: Laddningen tillåts när priset är högst denna nivå.
+      default: 0.75
+      selector:
+        number:
+          min: -5
+          max: 10
+          step: 0.01
+          unit_of_measurement: SEK/kWh
+          mode: box
+    stop_above:
+      name: Stoppa vid eller över
+      description: Bör vara högre än startgränsen för stabil hysteres.
+      default: 0.90
+      selector:
+        number:
+          min: -5
+          max: 10
+          step: 0.01
+          unit_of_measurement: SEK/kWh
+          mode: box
+    stop_on_invalid_price:
+      name: Stoppa om priset saknas
+      description: Rekommenderas för att automatiken ska vara fail-safe.
+      default: true
+      selector:
+        boolean:
+
+mode: restart
+max_exceeded: silent
+
+triggers:
+  - trigger: state
+    entity_id: !input price_sensor
+  - trigger: time_pattern
+    minutes: "/5"
+  - trigger: homeassistant
+    event: start
+
+conditions:
+  - condition: state
+    entity_id: !input automation_enabled
+    state: "on"
+
+variables:
+  price_entity: !input price_sensor
+  charger_entity: !input charging_switch
+  start_limit: !input start_below
+  stop_limit: !input stop_above
+  fail_safe_stop: !input stop_on_invalid_price
+  price_state: "{{ states(price_entity) }}"
+  price_value: "{{ states(price_entity) | float(0) }}"
+
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ price_state in ['unknown', 'unavailable', 'none', '']
+                 and fail_safe_stop
+                 and is_state(charger_entity, 'on') }}
+        sequence:
+          - action: switch.turn_off
+            target:
+              entity_id: !input charging_switch
+
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ price_state not in ['unknown', 'unavailable', 'none', '']
+                 and price_value <= (start_limit | float)
+                 and not is_state(charger_entity, 'on') }}
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input charging_switch
+
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ price_state not in ['unknown', 'unavailable', 'none', '']
+                 and price_value >= (stop_limit | float)
+                 and is_state(charger_entity, 'on') }}
+        sequence:
+          - action: switch.turn_off
+            target:
+              entity_id: !input charging_switch
