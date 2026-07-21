@@ -13,12 +13,10 @@ inside its configured window.
 
 ## Near-term priorities
 
-- Export the verified Phase 2 Home Assistant runtime into sanitized,
-  version-controlled configuration files.
-- Package helpers, templates, scripts, and automations so installation is
-  repeatable without editing Home Assistant storage files.
-- Move the startup fail-safe into a verified executable automation and test it
-  after a Home Assistant restart.
+- Migrate the existing UI-managed entities to the packaged configuration
+  without creating duplicate entity IDs.
+- Test the packaged startup fail-safe after a Home Assistant restart on the
+  actual charger.
 - Add configuration validation for missing entities, invalid time windows,
   unavailable next-day prices, and current settings above the approved limit.
 - Add deterministic planner tests using captured 96-slot Nord Pool datasets.

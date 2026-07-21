@@ -26,6 +26,8 @@ Phase 2 uses:
 - a current-first start sequence and a charge-control-first stop sequence;
 - an active Home Assistant startup fail-safe.
 
+The deployable package is in
+[`home-assistant/packages/ev_charging_planner.yaml`](home-assistant/packages/ev_charging_planner.yaml).
 The complete architecture and implementation reference are available under
 [`docs/design-reference`](docs/design-reference/AI_CONTEXT.md).
 
@@ -45,6 +47,7 @@ prototype and is not part of the active Phase 2 production architecture.
 
 ```text
 blueprints/             Early prototype automation
+home-assistant/         Deployable Phase 2 package and migration notes
 docs/installation.md    OCPP and Nord Pool setup overview
 docs/design-reference/  Phase 2 architecture and implementation source
 ROADMAP.md               Planned improvements and wishlist

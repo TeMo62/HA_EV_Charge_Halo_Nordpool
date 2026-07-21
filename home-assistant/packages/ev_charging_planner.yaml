@@ -1,0 +1,431 @@
+# EV charging planner for Home Assistant, Nord Pool and HACS OCPP.
+#
+# Required external entities:
+# - sensor.nordpool_kwh_se3_sek_3_10_025
+# - switch.charger_availability
+# - switch.charger_connector_1_charge_control
+# - number.charger_connector_1_maximum_current
+# - sensor.charger_connector_1_energy_session
+# - sensor.charger_connector_1_status_connector
+# - sensor.charger_connector_1_current_import (attribute: L1)
+#
+# This installation is deliberately limited to 10 A.
+
+input_boolean:
+  ev_smart_charging_enabled:
+    name: EV Smart Charging Enabled
+    icon: mdi:ev-station
+    initial: false
+
+input_datetime:
+  ev_day_window_start:
+    name: EV Day Window Start
+    has_date: false
+    has_time: true
+    initial: "10:00:00"
+  ev_day_window_end:
+    name: EV Day Window End
+    has_date: false
+    has_time: true
+    initial: "21:00:00"
+  ev_night_window_start:
+    name: EV Night Window Start
+    has_date: false
+    has_time: true
+    initial: "00:15:00"
+  ev_night_window_end:
+    name: EV Night Window End
+    has_date: false
+    has_time: true
+    initial: "08:00:00"
+  ev_plan_last_updated:
+    name: EV Plan Last Updated
+    has_date: true
+    has_time: true
+
+input_number:
+  ev_day_target_kwh:
+    name: EV Day Target Energy
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    initial: 0
+  ev_night_target_kwh:
+    name: EV Night Target Energy
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    initial: 0
+  ev_day_charge_current:
+    name: EV Day Charge Current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    initial: 10
+  ev_night_charge_current:
+    name: EV Night Charge Current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    initial: 10
+  ev_default_day_target_kwh:
+    name: EV Default Day Target Energy
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    initial: 0
+  ev_default_night_target_kwh:
+    name: EV Default Night Target Energy
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    initial: 0
+  ev_default_day_charge_current:
+    name: EV Default Day Charge Current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    initial: 10
+  ev_default_night_charge_current:
+    name: EV Default Night Charge Current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    initial: 10
+  ev_max_charge_current:
+    name: EV Maximum Charge Current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    initial: 10
+
+input_text:
+  ev_day_selected_charge_block:
+    name: EV Day Selected Charge Block
+    max: 20
+    initial: none
+  ev_night_selected_charge_block:
+    name: EV Night Selected Charge Block
+    max: 20
+    initial: none
+
+template:
+  - sensor:
+      - name: Halo L1
+        unique_id: halo_l1
+        unit_of_measurement: A
+        state: >-
+          {{ state_attr('sensor.charger_connector_1_current_import', 'L1') | float(0) }}
+      - name: EV Actual Current
+        unique_id: ev_actual_current
+        unit_of_measurement: A
+        state: >-
+          {% if is_state('sensor.charger_connector_1_status_connector', 'Charging') %}
+            {{ states('sensor.halo_l1') | float(0) }}
+          {% else %}
+            0
+          {% endif %}
+      # The name intentionally preserves the existing entity ID:
+      # sensor.sensor_ev_session_energy.
+      - name: sensor.ev_session_energy
+        unique_id: ev_session_energy
+        device_class: energy
+        state_class: total_increasing
+        unit_of_measurement: kWh
+        state: >-
+          {{ states('sensor.charger_connector_1_energy_session') | float(0) }}
+    binary_sensor:
+      - name: EV Tomorrow Prices Available
+        unique_id: ev_tomorrow_prices_available
+        state: >-
+          {{ state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'tomorrow_valid') == true
+             and (state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'raw_tomorrow') or []) | count >= 96 }}
+      - name: EV Day Charge Recommended Now
+        unique_id: ev_day_charge_recommended_now
+        state: >-
+          {% set block = states('input_text.ev_day_selected_charge_block') %}
+          {% if '–' not in block %}
+            false
+          {% else %}
+            {% set parts = block.split('–') %}
+            {% set start = today_at(parts[0]) %}
+            {% set end = today_at(parts[1]) %}
+            {{ start <= now() < end }}
+          {% endif %}
+      - name: EV Night Charge Recommended Now
+        unique_id: ev_night_charge_recommended_now
+        state: >-
+          {% set block = states('input_text.ev_night_selected_charge_block') %}
+          {% if '–' not in block %}
+            false
+          {% else %}
+            {% set parts = block.split('–') %}
+            {% set start = today_at(parts[0]) %}
+            {% set end = today_at(parts[1]) %}
+            {% if end <= start %}{% set end = end + timedelta(days=1) %}{% endif %}
+            {% if now().hour >= 12 %}
+              {% set start = start + timedelta(days=1) %}
+              {% set end = end + timedelta(days=1) %}
+            {% endif %}
+            {{ start <= now() < end }}
+          {% endif %}
+      - name: EV Charge Recommended Now
+        unique_id: ev_charge_recommended_now
+        state: >-
+          {{ is_state('binary_sensor.ev_day_charge_recommended_now', 'on')
+             or is_state('binary_sensor.ev_night_charge_recommended_now', 'on') }}
+    switch:
+      - name: EV Charger Available
+        unique_id: ev_charger_available
+        state: "{{ is_state('switch.charger_availability', 'on') }}"
+        availability: "{{ states('switch.charger_availability') not in ['unknown', 'unavailable'] }}"
+        turn_on:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.charger_availability
+        turn_off:
+          - action: switch.turn_off
+            target:
+              entity_id: switch.charger_availability
+      - name: EV Charge Control
+        unique_id: ev_charge_control
+        state: "{{ is_state('switch.charger_connector_1_charge_control', 'on') }}"
+        availability: "{{ states('switch.charger_connector_1_charge_control') not in ['unknown', 'unavailable'] }}"
+        turn_on:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.charger_connector_1_charge_control
+        turn_off:
+          - action: switch.turn_off
+            target:
+              entity_id: switch.charger_connector_1_charge_control
+
+script:
+  ev_restore_default_values:
+    alias: EV Restore Default Values
+    description: Restore day and night settings from the configured defaults.
+    sequence:
+      - action: input_number.set_value
+        target: {entity_id: input_number.ev_day_target_kwh}
+        data: {value: "{{ states('input_number.ev_default_day_target_kwh') | float(0) }}"}
+      - action: input_number.set_value
+        target: {entity_id: input_number.ev_night_target_kwh}
+        data: {value: "{{ states('input_number.ev_default_night_target_kwh') | float(0) }}"}
+      - action: input_number.set_value
+        target: {entity_id: input_number.ev_day_charge_current}
+        data: {value: "{{ states('input_number.ev_default_day_charge_current') | float(10) }}"}
+      - action: input_number.set_value
+        target: {entity_id: input_number.ev_night_charge_current}
+        data: {value: "{{ states('input_number.ev_default_night_charge_current') | float(10) }}"}
+    mode: single
+
+automation:
+  - id: ev_set_ocpp_charge_current
+    alias: EV Set OCPP Charge Current
+    description: Apply the requested current through HACS OCPP, clamped to 6-10 A.
+    triggers:
+      - trigger: state
+        entity_id: input_number.ev_max_charge_current
+    actions:
+      - action: ocpp.set_charge_rate
+        data:
+          devid: charger
+          limit_amps: >-
+            {{ [[states('input_number.ev_max_charge_current') | int(10), 6] | max, 10] | min }}
+    mode: restart
+
+  - id: ev_charge_start
+    alias: EV Charge Start
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.ev_charge_recommended_now
+        from: "off"
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.ev_smart_charging_enabled
+        state: "on"
+    actions:
+      - action: input_number.set_value
+        target: {entity_id: input_number.ev_max_charge_current}
+        data:
+          value: >-
+            {% if is_state('binary_sensor.ev_day_charge_recommended_now', 'on') %}
+              {{ states('input_number.ev_day_charge_current') | int(10) }}
+            {% else %}
+              {{ states('input_number.ev_night_charge_current') | int(10) }}
+            {% endif %}
+      - delay: "00:00:05"
+      - action: switch.turn_on
+        target: {entity_id: switch.ev_charger_available}
+    mode: single
+
+  - id: ev_charge_stop
+    alias: EV Charge Stop
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.ev_charge_recommended_now
+        from: "on"
+        to: "off"
+      - trigger: template
+        value_template: >-
+          {{ is_state('binary_sensor.ev_day_charge_recommended_now', 'on')
+             and states('sensor.sensor_ev_session_energy') | float(0)
+                 >= states('input_number.ev_day_target_kwh') | float(0) }}
+    conditions:
+      - condition: state
+        entity_id: input_boolean.ev_smart_charging_enabled
+        state: "on"
+      - condition: state
+        entity_id: switch.ev_charger_available
+        state: "on"
+    actions:
+      - action: switch.turn_off
+        target: {entity_id: switch.ev_charge_control}
+      - delay: "00:01:00"
+      - action: switch.turn_off
+        target: {entity_id: switch.ev_charger_available}
+      - action: input_number.set_value
+        target: {entity_id: input_number.ev_max_charge_current}
+        data: {value: "{{ states('input_number.ev_default_night_charge_current') | int(10) }}"}
+    mode: single
+
+  - id: ev_restore_defaults_after_day_window
+    alias: EV Restore Defaults After Day Charging Window
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.ev_day_charge_recommended_now
+        from: "on"
+        to: "off"
+    actions:
+      - action: script.ev_restore_default_values
+    mode: single
+
+  - id: ev_startup_failsafe
+    alias: EV Startup Fail-safe
+    description: Force charging off after Home Assistant starts, independently of smart charging.
+    triggers:
+      - trigger: homeassistant
+        event: start
+    actions:
+      - delay: "00:02:30"
+      - action: switch.turn_off
+        target: {entity_id: switch.ev_charge_control}
+      - wait_template: >-
+          {{ states('sensor.charger_connector_1_status_connector') != 'Charging' }}
+        timeout: "00:00:30"
+        continue_on_timeout: true
+      - action: switch.turn_off
+        target: {entity_id: switch.ev_charger_available}
+    mode: single
+
+  - id: ev_build_charge_plan
+    alias: EV Build Charge Plan
+    description: Select the lowest-cost continuous 15-minute block for each window.
+    triggers:
+      - trigger: time
+        at: "23:00:00"
+    actions:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ not (state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'tomorrow_valid') == true
+                 and (state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'raw_tomorrow') or []) | count >= 96) }}
+        then:
+          - action: persistent_notification.create
+            data:
+              title: EV Build Plan
+              message: Tomorrow's complete quarter-hour prices are not available; no plan was created.
+          - stop: Tomorrow prices are not available
+      - action: input_text.set_value
+        target: {entity_id: input_text.ev_night_selected_charge_block}
+        data:
+          value: >-
+            {% set energy = states('input_number.ev_night_target_kwh') | float(0) %}
+            {% set amps = states('input_number.ev_night_charge_current') | float(10) %}
+            {% set power = [((amps - 1) * 230 / 1000), 0.1] | max %}
+            {% set needed = ((energy / (power * 0.25)) | round(0, 'ceil')) | int %}
+            {% set prices = state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'raw_tomorrow') or [] %}
+            {% set ws = states('input_datetime.ev_night_window_start') %}
+            {% set we = states('input_datetime.ev_night_window_end') %}
+            {% set ns = namespace(slots=[], seen=[]) %}
+            {% for item in prices %}
+              {% set dt = as_datetime(item['start']) %}
+              {% set ts = as_timestamp(dt) | int %}
+              {% set t = dt.strftime('%H:%M:%S') %}
+              {% set inside = (ws < we and t >= ws and t < we) or (ws > we and (t >= ws or t < we)) %}
+              {% if inside and ts not in ns.seen %}
+                {% set ns.seen = ns.seen + [ts] %}
+                {% set ns.slots = ns.slots + [(dt.strftime('%H:%M'), ts, item['value'] | float)] %}
+              {% endif %}
+            {% endfor %}
+            {% set slots = ns.slots | sort(attribute=1) %}
+            {% set best = namespace(cost=999999, start='', end='', found=false) %}
+            {% if needed > 0 %}
+              {% for i in range(0, (slots | count) - needed + 1) %}
+                {% set block = slots[i:i + needed] %}
+                {% if block | count == needed and block[-1][1] == block[0][1] + ((needed - 1) * 900) %}
+                  {% set total = namespace(value=0) %}
+                  {% for slot in block %}{% set total.value = total.value + slot[2] %}{% endfor %}
+                  {% if total.value < best.cost %}
+                    {% set best.cost = total.value %}
+                    {% set best.start = block[0][0] %}
+                    {% set best.end = (block[-1][1] + 900) | timestamp_custom('%H:%M', true) %}
+                    {% set best.found = true %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ best.start ~ '–' ~ best.end if best.found else 'none' }}
+      - action: input_text.set_value
+        target: {entity_id: input_text.ev_day_selected_charge_block}
+        data:
+          value: >-
+            {% set energy = states('input_number.ev_day_target_kwh') | float(0) %}
+            {% set amps = states('input_number.ev_day_charge_current') | float(10) %}
+            {% set power = [((amps - 1) * 230 / 1000), 0.1] | max %}
+            {% set needed = ((energy / (power * 0.25)) | round(0, 'ceil')) | int %}
+            {% set prices = state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'raw_tomorrow') or [] %}
+            {% set ws = states('input_datetime.ev_day_window_start') %}
+            {% set we = states('input_datetime.ev_day_window_end') %}
+            {% set ns = namespace(slots=[], seen=[]) %}
+            {% for item in prices %}
+              {% set dt = as_datetime(item['start']) %}
+              {% set ts = as_timestamp(dt) | int %}
+              {% set t = dt.strftime('%H:%M:%S') %}
+              {% if t >= ws and t < we and ts not in ns.seen %}
+                {% set ns.seen = ns.seen + [ts] %}
+                {% set ns.slots = ns.slots + [(dt.strftime('%H:%M'), ts, item['value'] | float)] %}
+              {% endif %}
+            {% endfor %}
+            {% set slots = ns.slots | sort(attribute=1) %}
+            {% set best = namespace(cost=999999, start='', end='', found=false) %}
+            {% if needed > 0 %}
+              {% for i in range(0, (slots | count) - needed + 1) %}
+                {% set block = slots[i:i + needed] %}
+                {% if block | count == needed and block[-1][1] == block[0][1] + ((needed - 1) * 900) %}
+                  {% set total = namespace(value=0) %}
+                  {% for slot in block %}{% set total.value = total.value + slot[2] %}{% endfor %}
+                  {% if total.value < best.cost %}
+                    {% set best.cost = total.value %}
+                    {% set best.start = block[0][0] %}
+                    {% set best.end = (block[-1][1] + 900) | timestamp_custom('%H:%M', true) %}
+                    {% set best.found = true %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ best.start ~ '–' ~ best.end if best.found else 'none' }}
+      - action: input_datetime.set_datetime
+        target: {entity_id: input_datetime.ev_plan_last_updated}
+        data: {datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"}
+    mode: single

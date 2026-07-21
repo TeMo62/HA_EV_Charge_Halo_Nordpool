@@ -1,9 +1,10 @@
 # Installation overview
 
 This document describes the integrations and runtime assumptions used by the
-Phase 2 system. The repository does not yet provide a complete one-click
-installation package; exporting the verified runtime configuration is the
-first item in the [roadmap](../ROADMAP.md).
+Phase 2 system. A deployable package is available under
+[`home-assistant/packages`](../home-assistant/packages/ev_charging_planner.yaml).
+Read its [migration note](../home-assistant/README.md) before installing it on
+an existing Home Assistant instance.
 
 ## Prerequisites
 
@@ -90,6 +91,10 @@ parts of the charging equipment may support 16 A. Home Assistant and OCPP must
 not request more than the currently approved installation limit.
 
 ## 5. Initial verification
+
+For a new installation, install the package as described in
+[`home-assistant/README.md`](../home-assistant/README.md). Smart charging starts
+disabled so that all external entity IDs can be checked first.
 
 Perform tests with the vehicle disconnected first:
 
