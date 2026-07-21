@@ -1,0 +1,34 @@
+# Home Assistant secrets and local configuration
+secrets.yaml
+*.secret
+.env
+.env.*
+!.env.example
+
+# Credentials and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Home Assistant runtime and databases
+.storage/
+.homeassistant/
+*.db
+*.db-shm
+*.db-wal
+home-assistant.log*
+deps/
+tts/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
