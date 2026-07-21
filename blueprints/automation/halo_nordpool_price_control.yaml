@@ -1,39 +1,38 @@
 blueprint:
-  name: Halo – prisstyrd laddning med Nord Pool
+  name: Halo – Nord Pool price-threshold charging (prototype)
   description: >-
-    Startar och stoppar en Charge Amps Halo via dess laddningsswitch baserat
-    på Nord Pools aktuella pris. Två olika prisgränser ger hysteres och
-    förhindrar täta växlingar. En separat input_boolean används som
-    huvudbrytare för automatiken.
+    Early prototype that starts and stops a charging switch from the current
+    Nord Pool price. This blueprint is not part of the active Phase 2 OCPP
+    production architecture.
   domain: automation
   homeassistant:
     min_version: 2024.12.0
   input:
     price_sensor:
-      name: Nord Pool – aktuellt pris
-      description: Sensorn för aktuellt pris, normalt i SEK/kWh.
+      name: Nord Pool current-price sensor
+      description: Current electricity price, normally in SEK/kWh.
       selector:
         entity:
           filter:
             - domain: sensor
               device_class: monetary
     charging_switch:
-      name: Halo – laddningsswitch
-      description: Switchen från Charge Amps-integrationen som tillåter laddning.
+      name: Charging control switch
+      description: Switch used by this prototype to permit charging.
       selector:
         entity:
           filter:
             - domain: switch
     automation_enabled:
-      name: Automatisk laddning aktiverad
-      description: En input_boolean som fungerar som huvudbrytare.
+      name: Automatic charging enabled
+      description: Input boolean used as the prototype's master switch.
       selector:
         entity:
           filter:
             - domain: input_boolean
     start_below:
-      name: Starta vid eller under
-      description: Laddningen tillåts när priset är högst denna nivå.
+      name: Start at or below
+      description: Permit charging when the price is at or below this value.
       default: 0.75
       selector:
         number:
@@ -43,8 +42,8 @@ blueprint:
           unit_of_measurement: SEK/kWh
           mode: box
     stop_above:
-      name: Stoppa vid eller över
-      description: Bör vara högre än startgränsen för stabil hysteres.
+      name: Stop at or above
+      description: Set above the start threshold to provide stable hysteresis.
       default: 0.90
       selector:
         number:
@@ -54,8 +53,8 @@ blueprint:
           unit_of_measurement: SEK/kWh
           mode: box
     stop_on_invalid_price:
-      name: Stoppa om priset saknas
-      description: Rekommenderas för att automatiken ska vara fail-safe.
+      name: Stop when the price is unavailable
+      description: Recommended fail-safe behaviour for the prototype.
       default: true
       selector:
         boolean:

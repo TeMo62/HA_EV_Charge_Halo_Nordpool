@@ -1,43 +1,64 @@
 # HA EV Charge – Halo & Nord Pool
 
-Home Assistant-projekt för att planera och styra elbilsladdning med en
-OCPP-ansluten Charge Amps Halo utifrån elpriser från Nord Pool.
+Home Assistant project for planning and controlling a Charge Amps Halo over
+OCPP using Nord Pool electricity prices.
 
-## Status
+## Scope
 
-Phase 2-designen använder separata dag- och nattplaner, sammanhängande
-15-minutersblock och OCPP-baserade start-/stoppsekvenser. Den tidigare enkla
-prisgräns-blueprinten finns kvar som prototyp och är inte den aktiva
-produktionsarkitekturen.
+The current design is intended for vehicles that do **not** expose state of
+charge (SoC) to Home Assistant. The operator supplies estimated day and night
+energy requirements in kWh. The planner converts each target into a required
+duration and selects the lowest-cost continuous 15-minute block inside the
+configured charging window.
 
-Se [installationsguiden](docs/installation.md) för konfiguration och säker
-provkörning.
+This is deliberately a best-estimate model. Vehicle-derived energy demand is
+listed as a future enhancement in the [roadmap](ROADMAP.md).
 
-Den fullständiga arkitekturen och implementationens källreferens finns under
+## Current architecture
+
+Phase 2 uses:
+
+- separate day and night plans;
+- continuous 15-minute Nord Pool price intervals;
+- user-defined energy targets, currents, and time windows;
+- OCPP availability to permit a new charging session;
+- OCPP charge control to stop an active transaction;
+- a current-first start sequence and a charge-control-first stop sequence;
+- an active Home Assistant startup fail-safe.
+
+The complete architecture and implementation reference are available under
 [`docs/design-reference`](docs/design-reference/AI_CONTEXT.md).
 
-## Mål
+The repository also contains an early price-threshold blueprint. It is a
+prototype and is not part of the active Phase 2 production architecture.
 
-- Hämta och använda aktuella elpriser från Nord Pool i Home Assistant.
-- Planera laddning till prisvärda timmar.
-- Styra Halo-laddboxen på ett säkert och förutsägbart sätt.
-- Ge tydliga inställningar, status och möjlighet till manuell överstyrning.
-- Dokumentera installation, konfiguration och felsökning.
+## Goals
 
-## Planerad struktur
+- Plan charging against Nord Pool SE3 quarter-hour prices.
+- Complete the requested energy delivery inside configured day and night
+  windows.
+- Keep charging current within the installation's configured limit.
+- Preserve predictable manual control and safe failure behaviour.
+- Document installation, operation, verification, and future development.
+
+## Repository layout
 
 ```text
-config/       Home Assistant-konfiguration och hjälpare
-blueprints/   UI-konfigurerbara automationer för laddstyrning
-scripts/      Återanvändbara Home Assistant-skript
-docs/         Installation, konfiguration och felsökning
-tests/        Testfall och exempeldata där det är möjligt
+blueprints/             Early prototype automation
+docs/installation.md    OCPP and Nord Pool setup overview
+docs/design-reference/  Phase 2 architecture and implementation source
+ROADMAP.md               Planned improvements and wishlist
 ```
 
-## Säkerhet
+## Safety
 
-Laddning ska alltid begränsas av laddboxens, bilens och elanläggningens tillåtna värden. Lägg aldrig lösenord, API-nycklar, tokens eller andra hemligheter i repot.
+The charger, vehicle, cable, circuit breaker, and electrical installation must
+independently enforce their permitted limits. This project does not replace
+certified electrical protection or load balancing. Never commit passwords,
+tokens, API keys, certificates, exact private-network details, or
+`secrets.yaml`.
 
-## Licens
+## License
 
-Ingen licens har valts ännu. Tills en licensfil läggs till gäller vanliga upphovsrättsregler.
+No license has been selected yet. Until a license file is added, normal
+copyright rules apply.
