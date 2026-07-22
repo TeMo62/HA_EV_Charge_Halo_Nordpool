@@ -1,0 +1,118 @@
+# EV charging helpers — v1 baseline (2026-07-22)
+# Merge each top-level section into configuration.yaml, or include it through
+# a Home Assistant package. Initial values mirror the configured defaults.
+
+input_boolean:
+  ev_smart_charging_enabled:
+    name: EV smart charging enabled
+    icon: mdi:ev-plug-type2
+    initial: false
+
+input_number:
+  ev_max_charge_current:
+    name: EV max charge current
+    min: 6
+    max: 16
+    step: 1
+    unit_of_measurement: A
+    mode: slider
+    icon: mdi:current-ac
+    initial: 10
+  ev_day_target_kwh:
+    name: EV day target kWh
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    mode: slider
+    initial: 10
+  ev_night_target_kwh:
+    name: EV night target kWh
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    mode: slider
+    initial: 10
+  ev_day_charge_current:
+    name: EV day charge current
+    min: 6
+    max: 16
+    step: 1
+    unit_of_measurement: A
+    mode: box
+    initial: 10
+  ev_night_charge_current:
+    name: EV night charge current
+    min: 6
+    max: 15
+    step: 1
+    unit_of_measurement: A
+    mode: box
+    initial: 10
+  ev_default_day_target_kwh:
+    name: EV default day target kWh
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    mode: box
+    initial: 10
+  ev_default_night_target_kwh:
+    name: EV default night target kWh
+    min: 0
+    max: 11
+    step: 1
+    unit_of_measurement: kWh
+    mode: box
+    initial: 10
+  ev_default_day_charge_current:
+    name: EV default day charge current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    mode: box
+    initial: 10
+  ev_default_night_charge_current:
+    name: EV default night charge current
+    min: 6
+    max: 10
+    step: 1
+    unit_of_measurement: A
+    mode: box
+    initial: 10
+
+input_datetime:
+  ev_day_window_start:
+    name: EV day window start
+    has_date: false
+    has_time: true
+    initial: "10:00:00"
+  ev_day_window_end:
+    name: EV day window end
+    has_date: false
+    has_time: true
+    initial: "21:00:00"
+  ev_night_window_start:
+    name: EV night window start
+    has_date: false
+    has_time: true
+    initial: "00:15:00"
+  ev_night_window_end:
+    name: EV night window end
+    has_date: false
+    has_time: true
+    initial: "08:00:00"
+  ev_plan_last_updated:
+    name: EV plan last updated
+    has_date: true
+    has_time: true
+
+input_text:
+  ev_day_selected_charge_block:
+    name: EV day selected charge block
+    max: 20
+  ev_night_selected_charge_block:
+    name: EV night selected charge block
+    max: 20

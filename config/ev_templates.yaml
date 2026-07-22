@@ -1,0 +1,99 @@
+# Template entities used by the v1 planner.
+# Replace the source entity IDs if the OCPP/Nord Pool integrations create
+# different IDs in another Home Assistant installation.
+
+template:
+  - sensor:
+      - name: EV actual current
+        unique_id: ev_actual_current
+        unit_of_measurement: A
+        device_class: current
+        state_class: measurement
+        state: >-
+          {% if is_state('sensor.charger_connector_1_status_connector', 'Charging') %}
+            {{ states('sensor.halo_l1') | float(0) }}
+          {% else %}
+            0
+          {% endif %}
+      - name: Halo L1
+        unique_id: halo_current_l1
+        unit_of_measurement: A
+        device_class: current
+        state_class: measurement
+        state: >-
+          {{ state_attr('sensor.charger_connector_1_current_import', 'L1') | float(0) }}
+      # The doubled sensor_ in the resulting entity ID is retained because the
+      # live v1 automation uses sensor.sensor_ev_session_energy.
+      - name: sensor.ev_session_energy
+        unique_id: ev_session_energy_v1
+        unit_of_measurement: kWh
+        state_class: total_increasing
+        state: >-
+          {{ states('sensor.charger_connector_1_energy_session') | float(0) }}
+      - name: EV charger status
+        unique_id: ev_charger_status_v1
+        state: >-
+          {{ states('sensor.charger_connector_1_status_connector') }}
+    binary_sensor:
+      - name: Tomorrow prices available
+        unique_id: tomorrow_prices_available
+        state: >-
+          {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+          {{ state_attr(np, 'tomorrow_valid') == true
+             and ((state_attr(np, 'raw_tomorrow') or []) | count) >= 96 }}
+      - name: EV is charging
+        unique_id: ev_is_charging_v1
+        state: "{{ states('sensor.ev_actual_current') | float(0) > 0 }}"
+      - name: EV day charge recommended now
+        unique_id: ev_day_charge_recommended_now_v1
+        state: >-
+          {% set block = states('input_text.ev_day_selected_charge_block') %}
+          {% if '–' not in block %}
+            false
+          {% else %}
+            {% set parts = block.split('–') %}
+            {% set start = today_at(parts[0]) %}
+            {% set end = today_at(parts[1]) %}
+            {{ now() >= start and now() < end }}
+          {% endif %}
+      - name: EV night charge recommended now
+        unique_id: ev_night_charge_recommended_now_v1
+        state: >-
+          {% set block = states('input_text.ev_night_selected_charge_block') %}
+          {% if '–' not in block %}
+            false
+          {% else %}
+            {% set parts = block.split('–') %}
+            {% set start = today_at(parts[0]) %}
+            {% set end = today_at(parts[1]) %}
+            {% if end <= start %}{% set end = end + timedelta(days=1) %}{% endif %}
+            {% if now().hour >= 12 %}
+              {% set start = start + timedelta(days=1) %}
+              {% set end = end + timedelta(days=1) %}
+            {% endif %}
+            {{ now() >= start and now() < end }}
+          {% endif %}
+      - name: EV charge recommended now
+        unique_id: ev_charge_recommended_now_v1
+        state: >-
+          {{ is_state('binary_sensor.ev_day_charge_recommended_now', 'on')
+             or is_state('binary_sensor.ev_night_charge_recommended_now', 'on') }}
+    switch:
+      - name: EV charger available
+        unique_id: ev_charger_available_v1
+        state: "{{ is_state('switch.charger_availability', 'on') }}"
+        turn_on:
+          - action: switch.turn_on
+            target: {entity_id: switch.charger_availability}
+        turn_off:
+          - action: switch.turn_off
+            target: {entity_id: switch.charger_availability}
+      - name: EV charge control
+        unique_id: ev_charge_control_v1
+        state: "{{ is_state('switch.charger_connector_1_charge_control', 'on') }}"
+        turn_on:
+          - action: switch.turn_on
+            target: {entity_id: switch.charger_connector_1_charge_control}
+        turn_off:
+          - action: switch.turn_off
+            target: {entity_id: switch.charger_connector_1_charge_control}
