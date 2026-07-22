@@ -42,3 +42,12 @@ start charging when Home Assistant restarts. See [operations and
 restart](docs/operations.md).
 
 No secrets, tokens, databases, or raw `.storage` files are included.
+
+## Feedback
+
+Questions, suggestions, and reports from similar installations are welcome
+through [GitHub Issues](https://github.com/TeMo62/HA_EV_Charge_Halo_Nordpool/issues).
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
