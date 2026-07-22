@@ -1,40 +1,40 @@
 # HA EV Charge – Halo & Nord Pool
 
-V1-baslinje för den Home Assistant-lösning som var i aktiv drift
-2026-07-22. Den planerar separata dag- och nattpass från Nord Pools
-15-minuterspriser och styr en Charge Amps Halo lokalt via OCPP.
+V1 baseline of the Home Assistant solution that was in active operation on
+2026-07-22. It plans separate day and night charging sessions using Nord Pool
+15-minute prices and controls a Charge Amps Halo locally through OCPP.
 
-## V1 omfattar
+## V1 features
 
-- billigaste sammanhängande laddblock inom separata dag- och nattfönster
-- energimål och laddström per pass
-- OCPP-strömgräns
-- start via `availability`
-- stopp i Halo-säker ordning: `charge_control`, 60 sekunder, `availability`
-- återställning av standardvärden efter dagspasset
-- uppskattad kostnad och EV-dashboard
+- cheapest continuous charging block within separate day and night windows
+- energy target and charging current for each session
+- OCPP current limit
+- start through `availability`
+- stop in the Halo-safe order: `charge_control`, 60 seconds, `availability`
+- restore default values after the day session
+- estimated cost and EV dashboard
 
-## Filer
+## Files
 
 ```text
-automations/ev_charging.yaml        aktiva automationer
-config/ev_helpers.yaml              helpers och v1-startvärden
-config/ev_templates.yaml            OCPP-wrappers och aktivt laddfönster
-config/ev_cost_templates.yaml       uppskattad kostnad
+automations/ev_charging.yaml        active automations
+config/ev_helpers.yaml              helpers and v1 initial values
+config/ev_templates.yaml            OCPP wrappers and active charging window
+config/ev_cost_templates.yaml       estimated cost
 scripts/ev_restore_default_values.yaml
-dashboards/ev_energy.json           dashboardexport
+dashboards/ev_energy.json           dashboard export
 docs/installation.md
 docs/operations.md
 docs/v1-baseline.md
 ```
 
-Den äldre Charge Amps-blueprinten i `blueprints/` är ett historiskt första
-försök och ingår inte i v1-flödet.
+The older Charge Amps blueprint in `blueprints/` is an early historical
+attempt and is not part of the v1 flow.
 
-## Viktigt
+## Important
 
-V1 har avsiktligt ingen automatisk fail-safe vid omstart. En ansluten bil kan
-börja ladda när Home Assistant startas om. Se [drift och
-omstart](docs/operations.md).
+V1 intentionally has no automatic restart fail-safe. A connected vehicle may
+start charging when Home Assistant restarts. See [operations and
+restart](docs/operations.md).
 
-Inga hemligheter, tokens, databaser eller råa `.storage`-filer ingår.
+No secrets, tokens, databases, or raw `.storage` files are included.
