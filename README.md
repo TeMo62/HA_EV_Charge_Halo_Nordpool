@@ -14,6 +14,9 @@ V1 baseline of the Home Assistant solution that was in active operation on
 - restore default values after the day session
 - estimated cost and EV dashboard
 
+See [dashboard screenshots and descriptions](docs/dashboard.md) for the status,
+price chart, and settings views.
+
 ## Files
 
 ```text
@@ -23,6 +26,7 @@ config/ev_templates.yaml            OCPP wrappers and active charging window
 config/ev_cost_templates.yaml       estimated cost
 scripts/ev_restore_default_values.yaml
 dashboards/ev_energy.json           dashboard export
+docs/dashboard.md
 docs/installation.md
 docs/operations.md
 docs/v1-baseline.md
