@@ -1,74 +1,53 @@
-# Installation
+# Installation and recovery
 
-## Förutsättningar
+This repository is primarily a reproducible baseline of the working
+installation. Do not add the YAML entities on top of the same GUI-created
+helpers and templates in the existing installation, as this will create
+duplicate entity IDs.
 
-- Home Assistant 2024.12 eller senare.
-- Den officiella Nord Pool-integrationen konfigurerad för rätt elområde och SEK.
-- HACS installerat.
-- Chargeamps-integrationen installerad och ansluten till din Halo.
-- En `input_boolean` som används som huvudbrytare för automatisk laddning.
+## Dependencies
 
-Spara aldrig e-postadress, lösenord, API-nyckel eller innehållet i
-`secrets.yaml` i detta repository.
+- Home Assistant with the OCPP integration connected to the Halo
+- Nord Pool sensor with `raw_today`, `raw_tomorrow`, and `tomorrow_valid`
+- 15-minute prices, normally 96 entries per day
+- ApexCharts Card through HACS for the exported dashboard chart
 
-## 1. Installera Nord Pool
+The baseline uses the following installation-specific sources:
 
-I Home Assistant går du till **Inställningar → Enheter och tjänster → Lägg
-till integration** och väljer **Nord Pool**. Välj ditt elområde och SEK.
+- `sensor.nordpool_kwh_se3_sek_3_10_025`
+- `switch.charger_availability`
+- `switch.charger_connector_1_charge_control`
+- `sensor.charger_connector_1_status_connector`
+- `sensor.charger_connector_1_current_import`
+- `sensor.charger_connector_1_energy_session`
+- OCPP device ID `charger`
 
-Kontrollera att du får en sensor för aktuellt pris. Priset ska anges i
-SEK/kWh. Nord Pools rena marknadspris saknar moms och övriga påslag.
+Replace these names in the files if the integrations create different entity
+IDs.
 
-## 2. Installera Chargeamps
+## Existing installation
 
-I HACS söker du efter **Chargeamps**, installerar integrationen och startar
-om Home Assistant. Lägg därefter till Chargeamps under **Inställningar →
-Enheter och tjänster**.
+The current Home Assistant installation already uses GUI-created helpers and
+templates. Use the repository files as a version-controlled reference until a
+planned migration is performed. The automations can be compared with or
+restored to `automations.yaml`, and the script to `scripts.yaml`.
 
-Integrationen kräver dina Charge Amps-uppgifter och en API-nyckel från
-Charge Amps support. Dessa uppgifter ska endast anges i Home Assistant.
+Remove the misplaced `EV Charger Fail Safe On Startup` block from
+`configuration.yaml` during the next planned cleanup. It is not registered as
+an automation and should not be moved to `automations.yaml`.
 
-Kontrollera att Halo-enheten har en switch som kan aktivera och stoppa
-laddning. Testa switchen manuellt innan automatiken skapas.
+## Clean installation
 
-## 3. Skapa huvudbrytaren
+1. Create the helpers from `config/ev_helpers.yaml` or their GUI equivalents.
+2. Add the template entities from both template files in `config/`.
+3. Add the script to `scripts.yaml` and the automations to
+   `automations.yaml`.
+4. Validate the configuration before restarting.
+5. Import `dashboards/ev_energy.json` or recreate the cards manually.
+6. Verify all entity IDs while smart charging is disabled.
+7. Test start and stop first without a vehicle connected.
+8. Enable `input_boolean.ev_smart_charging_enabled` only after testing is
+   complete.
 
-Gå till **Inställningar → Enheter och tjänster → Hjälpare → Skapa hjälpare**
-och välj **Växla**. Döp den exempelvis till `Automatisk elbilsladdning`.
-
-När hjälparen är avstängd gör blueprinten inga ändringar. Den stoppar inte
-automatiskt en redan pågående laddning när du stänger av hjälparen.
-
-## 4. Kopiera blueprinten
-
-Kopiera filen
-`blueprints/automation/halo_nordpool_price_control.yaml` till samma sökväg
-under Home Assistants konfigurationsmapp.
-
-Gå sedan till **Inställningar → Automationer och scener → Blueprints**,
-ladda om blueprints och skapa en automation från blueprinten.
-
-Välj:
-
-- Nord Pools sensor för aktuellt pris.
-- Halos laddningsswitch.
-- Huvudbrytaren du skapade.
-- En startgräns och en något högre stoppgräns.
-
-Exempel: start vid 0,75 SEK/kWh och stopp vid 0,90 SEK/kWh. Skillnaden
-förhindrar att laddningen slår av och på vid små prisvariationer.
-
-## Säker provkörning
-
-1. Börja med bilen urkopplad och verifiera hur switchen reagerar.
-2. Sätt tillfälligt gränser som gör att start respektive stopp utlöses.
-3. Kontrollera automationsspåren i Home Assistant.
-4. Återställ önskade gränser innan bilen ansluts.
-5. Kontrollera alltid laddboxens och elanläggningens strömgränser separat.
-
-## Begränsning i första versionen
-
-Denna version reagerar på det aktuella priset. Den väljer ännu inte ett
-optimalt antal framtida 15-minutersperioder eller tar hänsyn till en
-avresetid. Det läggs till efter att de faktiska Halo- och Nord Pool-entiteterna
-har verifierats i din Home Assistant-installation.
+After changing a target, current, or time window, rebuild the plan manually if
+the change should affect an already selected block.

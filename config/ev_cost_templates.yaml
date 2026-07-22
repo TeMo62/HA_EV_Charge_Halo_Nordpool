@@ -1,0 +1,68 @@
+# Estimated cost sensors used by the EV dashboard.
+
+template:
+  - sensor:
+      - name: EV day estimated charge cost
+        unique_id: ev_day_estimated_charge_cost_v1
+        unit_of_measurement: SEK
+        state: >-
+          {% set _ = now() %}
+          {% set energy = states('input_number.ev_day_target_kwh') | float(0) %}
+          {% set amps = states('input_number.ev_day_charge_current') | float(6) %}
+          {% set power = [((amps - 1) * 230 / 1000), 0.1] | max %}
+          {% set needed = ((energy / (power * 0.25)) | round(0, 'ceil')) | int %}
+          {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+          {% set prices = (state_attr(np, 'raw_today') or []) + (state_attr(np, 'raw_tomorrow') or []) %}
+          {% set start = today_at(states('input_datetime.ev_day_window_start')) %}
+          {% set end = today_at(states('input_datetime.ev_day_window_end')) %}
+          {% if now() >= end %}{% set start = start + timedelta(days=1) %}{% set end = end + timedelta(days=1) %}{% endif %}
+          {% set start_ts = [as_timestamp(start), as_timestamp(now())] | max %}
+          {% set end_ts = as_timestamp(end) %}
+          {% set ns = namespace(slots=[]) %}
+          {% for item in prices %}
+            {% set dt = as_datetime(item['start']) %}{% set ts = as_timestamp(dt) | int %}
+            {% if ts >= start_ts and ts < end_ts %}{% set ns.slots = ns.slots + [(ts, item['value'] | float)] %}{% endif %}
+          {% endfor %}
+          {% set slots = ns.slots | sort(attribute=0) %}
+          {% set best = namespace(cost=999999, found=false) %}
+          {% for i in range(0, (slots | count) - needed + 1) %}
+            {% set block = slots[i:i + needed] %}
+            {% if block[-1][0] == block[0][0] + ((needed - 1) * 900) %}
+              {% set sum = namespace(value=0) %}
+              {% for slot in block %}{% set sum.value = sum.value + (slot[1] * power * 0.25) %}{% endfor %}
+              {% if sum.value < best.cost %}{% set best.cost = sum.value %}{% set best.found = true %}{% endif %}
+            {% endif %}
+          {% endfor %}
+          {% if best.found %}{{ best.cost | round(2) }}{% else %}unknown{% endif %}
+      - name: EV night estimated charge cost
+        unique_id: ev_night_estimated_charge_cost_v1
+        unit_of_measurement: SEK
+        state: >-
+          {% set _ = now() %}
+          {% set energy = states('input_number.ev_night_target_kwh') | float(0) %}
+          {% set amps = states('input_number.ev_night_charge_current') | float(10) %}
+          {% set power = [((amps - 1) * 230 / 1000), 0.1] | max %}
+          {% set needed = ((energy / (power * 0.25)) | round(0, 'ceil')) | int %}
+          {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+          {% set prices = (state_attr(np, 'raw_today') or []) + (state_attr(np, 'raw_tomorrow') or []) %}
+          {% set start = today_at(states('input_datetime.ev_night_window_start')) %}
+          {% set end = today_at(states('input_datetime.ev_night_window_end')) %}
+          {% if now() >= end %}{% set start = start + timedelta(days=1) %}{% set end = end + timedelta(days=1) %}{% endif %}
+          {% set start_ts = [as_timestamp(start), as_timestamp(now())] | max %}
+          {% set end_ts = as_timestamp(end) %}
+          {% set ns = namespace(slots=[]) %}
+          {% for item in prices %}
+            {% set dt = as_datetime(item['start']) %}{% set ts = as_timestamp(dt) | int %}
+            {% if ts >= start_ts and ts < end_ts %}{% set ns.slots = ns.slots + [(ts, item['value'] | float)] %}{% endif %}
+          {% endfor %}
+          {% set slots = ns.slots | sort(attribute=0) %}
+          {% set best = namespace(cost=999999, found=false) %}
+          {% for i in range(0, (slots | count) - needed + 1) %}
+            {% set block = slots[i:i + needed] %}
+            {% if block[-1][0] == block[0][0] + ((needed - 1) * 900) %}
+              {% set sum = namespace(value=0) %}
+              {% for slot in block %}{% set sum.value = sum.value + (slot[1] * power * 0.25) %}{% endfor %}
+              {% if sum.value < best.cost %}{% set best.cost = sum.value %}{% set best.found = true %}{% endif %}
+            {% endif %}
+          {% endfor %}
+          {% if best.found %}{{ best.cost | round(2) }}{% else %}unknown{% endif %}

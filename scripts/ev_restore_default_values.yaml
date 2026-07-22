@@ -1,0 +1,17 @@
+ev_restore_default_values:
+  alias: EV Restore Default Values
+  description: Restore day and night values from the configured defaults.
+  mode: single
+  sequence:
+    - action: input_number.set_value
+      target: {entity_id: input_number.ev_day_target_kwh}
+      data: {value: "{{ states('input_number.ev_default_day_target_kwh') | float(0) }}"}
+    - action: input_number.set_value
+      target: {entity_id: input_number.ev_night_target_kwh}
+      data: {value: "{{ states('input_number.ev_default_night_target_kwh') | float(0) }}"}
+    - action: input_number.set_value
+      target: {entity_id: input_number.ev_day_charge_current}
+      data: {value: "{{ states('input_number.ev_default_day_charge_current') | float(0) }}"}
+    - action: input_number.set_value
+      target: {entity_id: input_number.ev_night_charge_current}
+      data: {value: "{{ states('input_number.ev_default_night_charge_current') | float(0) }}"}

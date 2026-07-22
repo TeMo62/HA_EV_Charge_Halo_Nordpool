@@ -1,37 +1,44 @@
 # HA EV Charge – Halo & Nord Pool
 
-Home Assistant-projekt för att styra elbilsladdning med en Halo-laddbox utifrån elpriser från Nord Pool.
+V1 baseline of the Home Assistant solution that was in active operation on
+2026-07-22. It plans separate day and night charging sessions using Nord Pool
+15-minute prices and controls a Charge Amps Halo locally through OCPP.
 
-## Status
+## V1 features
 
-Första versionen innehåller en Home Assistant-blueprint för prisstyrd
-laddning med hysteres, huvudbrytare och fail-safe vid saknat pris.
+- cheapest continuous charging block within separate day and night windows
+- energy target and charging current for each session
+- OCPP current limit
+- start through `availability`
+- stop in the Halo-safe order: `charge_control`, 60 seconds, `availability`
+- restore default values after the day session
+- estimated cost and EV dashboard
 
-Se [installationsguiden](docs/installation.md) för konfiguration och säker
-provkörning.
+See [dashboard screenshots and descriptions](docs/dashboard.md) for the status,
+price chart, and settings views.
 
-## Mål
-
-- Hämta och använda aktuella elpriser från Nord Pool i Home Assistant.
-- Planera laddning till prisvärda timmar.
-- Styra Halo-laddboxen på ett säkert och förutsägbart sätt.
-- Ge tydliga inställningar, status och möjlighet till manuell överstyrning.
-- Dokumentera installation, konfiguration och felsökning.
-
-## Planerad struktur
+## Files
 
 ```text
-config/       Home Assistant-konfiguration och hjälpare
-blueprints/   UI-konfigurerbara automationer för laddstyrning
-scripts/      Återanvändbara Home Assistant-skript
-docs/         Installation, konfiguration och felsökning
-tests/        Testfall och exempeldata där det är möjligt
+automations/ev_charging.yaml        active automations
+config/ev_helpers.yaml              helpers and v1 initial values
+config/ev_templates.yaml            OCPP wrappers and active charging window
+config/ev_cost_templates.yaml       estimated cost
+scripts/ev_restore_default_values.yaml
+dashboards/ev_energy.json           dashboard export
+docs/dashboard.md
+docs/installation.md
+docs/operations.md
+docs/v1-baseline.md
 ```
 
-## Säkerhet
+The older Charge Amps blueprint in `blueprints/` is an early historical
+attempt and is not part of the v1 flow.
 
-Laddning ska alltid begränsas av laddboxens, bilens och elanläggningens tillåtna värden. Lägg aldrig lösenord, API-nycklar, tokens eller andra hemligheter i repot.
+## Important
 
-## Licens
+V1 intentionally has no automatic restart fail-safe. A connected vehicle may
+start charging when Home Assistant restarts. See [operations and
+restart](docs/operations.md).
 
-Ingen licens har valts ännu. Tills en licensfil läggs till gäller vanliga upphovsrättsregler.
+No secrets, tokens, databases, or raw `.storage` files are included.

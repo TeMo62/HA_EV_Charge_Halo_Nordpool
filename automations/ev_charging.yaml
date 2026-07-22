@@ -1,0 +1,209 @@
+# Active EV automations from the 2026-07-22 v1 baseline.
+# The two old fixed-time automations and both old "Lock Selected Charge Block"
+# automations are intentionally omitted.
+
+- alias: Set Halo charge current
+  id: ev_v1_set_halo_charge_current
+  mode: restart
+  triggers:
+    - trigger: state
+      entity_id: input_number.ev_max_charge_current
+  actions:
+    - action: ocpp.set_charge_rate
+      data:
+        devid: charger
+        limit_amps: "{{ states('input_number.ev_max_charge_current') | int }}"
+
+- alias: EV Charge Start
+  id: ev_v1_charge_start
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.ev_charge_recommended_now
+      to: "on"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.ev_smart_charging_enabled
+      state: "on"
+  actions:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: binary_sensor.ev_day_charge_recommended_now
+              state: "on"
+          sequence:
+            - action: input_number.set_value
+              target: {entity_id: input_number.ev_max_charge_current}
+              data:
+                value: "{{ states('input_number.ev_day_charge_current') | int }}"
+        - conditions:
+            - condition: state
+              entity_id: binary_sensor.ev_night_charge_recommended_now
+              state: "on"
+          sequence:
+            - action: input_number.set_value
+              target: {entity_id: input_number.ev_max_charge_current}
+              data:
+                value: "{{ states('input_number.ev_night_charge_current') | int }}"
+    - delay: "00:00:05"
+    - action: switch.turn_on
+      target: {entity_id: switch.ev_charger_available}
+
+- alias: EV Charge Stop
+  id: ev_v1_charge_stop
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.ev_charge_recommended_now
+      to: "off"
+    - trigger: template
+      value_template: >-
+        {{ is_state('binary_sensor.ev_day_charge_recommended_now', 'on')
+           and states('sensor.sensor_ev_session_energy') | float(0)
+             >= states('input_number.ev_day_target_kwh') | float(0) }}
+  conditions:
+    - condition: state
+      entity_id: input_boolean.ev_smart_charging_enabled
+      state: "on"
+    - condition: state
+      entity_id: switch.ev_charger_available
+      state: "on"
+  actions:
+    - action: switch.turn_off
+      target: {entity_id: switch.ev_charge_control}
+    - delay: "00:01:00"
+    - action: switch.turn_off
+      target: {entity_id: switch.ev_charger_available}
+    - action: input_number.set_value
+      target: {entity_id: input_number.ev_max_charge_current}
+      data:
+        value: "{{ states('input_number.ev_default_night_charge_current') | int }}"
+
+- alias: EV Build Charge Plan
+  id: ev_v1_build_charge_plan
+  mode: single
+  triggers:
+    - trigger: time
+      at: "23:00:00"
+  conditions:
+    - condition: template
+      value_template: >-
+        {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+        {% set tomorrow_valid = state_attr(np, 'tomorrow_valid') == true %}
+        {% set block = states('input_text.ev_day_selected_charge_block') %}
+        {% if not tomorrow_valid %}
+          false
+        {% elif '–' not in block %}
+          true
+        {% else %}
+          {% set day_end = today_at(block.split('–')[1]) %}
+          {{ now() >= day_end }}
+        {% endif %}
+  actions:
+    - if:
+        - condition: template
+          value_template: >-
+            {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+            {{ not (state_attr(np, 'tomorrow_valid') == true
+                    and (state_attr(np, 'raw_tomorrow') or []) | count >= 96) }}
+      then:
+        - action: persistent_notification.create
+          data:
+            title: EV Build Plan
+            message: ABORTED - Tomorrow prices not available
+        - stop: Tomorrow prices are not available
+    - action: input_text.set_value
+      target: {entity_id: input_text.ev_night_selected_charge_block}
+      data:
+        value: >-
+          {% set energy = states('input_number.ev_night_target_kwh') | float(0) %}
+          {% set amps = states('input_number.ev_night_charge_current') | float(10) %}
+          {% set power = [((amps - 1) * 230 / 1000), 0.1] | max %}
+          {% set needed_slots = ((energy / (power * 0.25)) | round(0, 'ceil')) | int %}
+          {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+          {% set prices = state_attr(np, 'raw_tomorrow') or [] %}
+          {% set window_start = states('input_datetime.ev_night_window_start') %}
+          {% set window_end = states('input_datetime.ev_night_window_end') %}
+          {% set ns = namespace(slots=[], seen=[]) %}
+          {% for item in prices %}
+            {% set dt = as_datetime(item['start']) %}
+            {% set ts = as_timestamp(dt) | int %}
+            {% set t = dt.strftime('%H:%M:%S') %}
+            {% if t >= window_start and t < window_end and ts not in ns.seen %}
+              {% set ns.seen = ns.seen + [ts] %}
+              {% set ns.slots = ns.slots + [(dt.strftime('%H:%M'), ts, item['value'] | float)] %}
+            {% endif %}
+          {% endfor %}
+          {% set slots = ns.slots | sort(attribute=1) %}
+          {% set best = namespace(cost=999999, start='', end='', found=false) %}
+          {% for i in range(0, (slots | count) - needed_slots + 1) %}
+            {% set block = slots[i:i + needed_slots] %}
+            {% set expected_end = block[0][1] + ((needed_slots - 1) * 900) %}
+            {% if block[-1][1] == expected_end %}
+              {% set sum = namespace(value=0) %}
+              {% for slot in block %}{% set sum.value = sum.value + slot[2] %}{% endfor %}
+              {% if sum.value < best.cost %}
+                {% set best.cost = sum.value %}
+                {% set best.start = block[0][0] %}
+                {% set best.end = (block[-1][1] + 900) | timestamp_custom('%H:%M', true) %}
+                {% set best.found = true %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {% if best.found %}{{ best.start }}–{{ best.end }}{% else %}none{% endif %}
+    - action: input_text.set_value
+      target: {entity_id: input_text.ev_day_selected_charge_block}
+      data:
+        value: >-
+          {% set energy = states('input_number.ev_day_target_kwh') | float(0) %}
+          {% set amps = states('input_number.ev_day_charge_current') | float(6) %}
+          {% set power = [((amps - 1) * 230 / 1000), 0.1] | max %}
+          {% set needed_slots = ((energy / (power * 0.25)) | round(0, 'ceil')) | int %}
+          {% set np = 'sensor.nordpool_kwh_se3_sek_3_10_025' %}
+          {% set prices = state_attr(np, 'raw_tomorrow') or [] %}
+          {% set window_start = states('input_datetime.ev_day_window_start') %}
+          {% set window_end = states('input_datetime.ev_day_window_end') %}
+          {% set ns = namespace(slots=[], seen=[]) %}
+          {% for item in prices %}
+            {% set dt = as_datetime(item['start']) %}
+            {% set ts = as_timestamp(dt) | int %}
+            {% set t = dt.strftime('%H:%M:%S') %}
+            {% if t >= window_start and t < window_end and ts not in ns.seen %}
+              {% set ns.seen = ns.seen + [ts] %}
+              {% set ns.slots = ns.slots + [(dt.strftime('%H:%M'), ts, item['value'] | float)] %}
+            {% endif %}
+          {% endfor %}
+          {% set slots = ns.slots | sort(attribute=1) %}
+          {% set best = namespace(cost=999999, start='', end='', found=false) %}
+          {% for i in range(0, (slots | count) - needed_slots + 1) %}
+            {% set block = slots[i:i + needed_slots] %}
+            {% set expected_end = block[0][1] + ((needed_slots - 1) * 900) %}
+            {% if block[-1][1] == expected_end %}
+              {% set sum = namespace(value=0) %}
+              {% for slot in block %}{% set sum.value = sum.value + slot[2] %}{% endfor %}
+              {% if sum.value < best.cost %}
+                {% set best.cost = sum.value %}
+                {% set best.start = block[0][0] %}
+                {% set best.end = (block[-1][1] + 900) | timestamp_custom('%H:%M', true) %}
+                {% set best.found = true %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {% if best.found %}{{ best.start }}–{{ best.end }}{% else %}none{% endif %}
+    - action: input_datetime.set_datetime
+      target: {entity_id: input_datetime.ev_plan_last_updated}
+      data:
+        datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+- alias: EV Restore Defaults After Day Charging Window
+  id: ev_v1_restore_defaults_after_day
+  description: Restore EV settings when the planned day charging window ends.
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.ev_day_charge_recommended_now
+      from: "on"
+      to: "off"
+  actions:
+    - action: script.turn_on
+      target: {entity_id: script.ev_restore_default_values}
