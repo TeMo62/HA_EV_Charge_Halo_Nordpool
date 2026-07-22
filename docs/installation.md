@@ -1,17 +1,18 @@
-# Installation och återställning
+# Installation and recovery
 
-Detta är i första hand en reproducerbar baslinje av den fungerande
-installationen. Lägg inte YAML-entiteterna ovanpå samma GUI-skapade helpers och
-templates i den befintliga installationen; då uppstår dubbla entity-ID:n.
+This repository is primarily a reproducible baseline of the working
+installation. Do not add the YAML entities on top of the same GUI-created
+helpers and templates in the existing installation, as this will create
+duplicate entity IDs.
 
-## Beroenden
+## Dependencies
 
-- Home Assistant med OCPP-integrationen ansluten till Halo
-- Nord Pool-sensor med `raw_today`, `raw_tomorrow` och `tomorrow_valid`
-- 15-minuterspriser, normalt 96 poster per dygn
-- ApexCharts Card via HACS för den exporterade dashboardgrafen
+- Home Assistant with the OCPP integration connected to the Halo
+- Nord Pool sensor with `raw_today`, `raw_tomorrow`, and `tomorrow_valid`
+- 15-minute prices, normally 96 entries per day
+- ApexCharts Card through HACS for the exported dashboard chart
 
-Baslinjen använder följande installationsspecifika källor:
+The baseline uses the following installation-specific sources:
 
 - `sensor.nordpool_kwh_se3_sek_3_10_025`
 - `switch.charger_availability`
@@ -19,31 +20,34 @@ Baslinjen använder följande installationsspecifika källor:
 - `sensor.charger_connector_1_status_connector`
 - `sensor.charger_connector_1_current_import`
 - `sensor.charger_connector_1_energy_session`
-- OCPP-enhets-ID `charger`
+- OCPP device ID `charger`
 
-Byt dessa namn i filerna om integrationerna skapar andra entity-ID:n.
+Replace these names in the files if the integrations create different entity
+IDs.
 
-## Befintlig installation
+## Existing installation
 
-Den nuvarande HA-installationen kör redan GUI-skapade helpers och templates.
-Använd därför repo-filerna som versionshanterad referens tills en planerad
-migrering görs. Automationerna kan jämföras med eller återställas till
-`automations.yaml`, och skriptet med `scripts.yaml`.
+The current Home Assistant installation already uses GUI-created helpers and
+templates. Use the repository files as a version-controlled reference until a
+planned migration is performed. The automations can be compared with or
+restored to `automations.yaml`, and the script to `scripts.yaml`.
 
-Ta bort det felplacerade blocket `EV Charger Fail Safe On Startup` ur
-`configuration.yaml` vid nästa planerade städning. Det registreras inte som en
-automation och ska inte flyttas till `automations.yaml`.
+Remove the misplaced `EV Charger Fail Safe On Startup` block from
+`configuration.yaml` during the next planned cleanup. It is not registered as
+an automation and should not be moved to `automations.yaml`.
 
-## Ren installation
+## Clean installation
 
-1. Skapa helpers från `config/ev_helpers.yaml` eller motsvarande i GUI.
-2. Lägg till template-entiteterna från båda filerna i `config/`.
-3. Lägg skriptet i `scripts.yaml` och automationerna i `automations.yaml`.
-4. Kontrollera konfigurationen innan omstart.
-5. Importera `dashboards/ev_energy.json` eller återskapa korten manuellt.
-6. Kontrollera alla entity-ID:n med smart charging avstängd.
-7. Testa först start och stopp utan ansluten bil.
-8. Aktivera `input_boolean.ev_smart_charging_enabled` först när testet är klart.
+1. Create the helpers from `config/ev_helpers.yaml` or their GUI equivalents.
+2. Add the template entities from both template files in `config/`.
+3. Add the script to `scripts.yaml` and the automations to
+   `automations.yaml`.
+4. Validate the configuration before restarting.
+5. Import `dashboards/ev_energy.json` or recreate the cards manually.
+6. Verify all entity IDs while smart charging is disabled.
+7. Test start and stop first without a vehicle connected.
+8. Enable `input_boolean.ev_smart_charging_enabled` only after testing is
+   complete.
 
-Efter ändring av mål, ampere eller tidsfönster måste planen byggas om manuellt
-om ändringen ska påverka ett redan valt block.
+After changing a target, current, or time window, rebuild the plan manually if
+the change should affect an already selected block.
