@@ -9,8 +9,10 @@ charging planner.
 
 The status view shows whether smart charging is enabled, the current day and
 night energy targets, the selected continuous charging windows, estimated
-session costs, and whether charging is recommended at the current time. It also
-exposes manual controls for the OCPP charge and availability switches and shows
+session costs, and whether charging is recommended at the current time.
+The status view also shows the live charging current and the energy delivered
+during the current charging session. It also exposes manual controls
+for the OCPP charge and availability switches and shows
 whether tomorrow's Nord Pool prices are available.
 
 The **EV Build Charge Plan** button recalculates the selected day and night
