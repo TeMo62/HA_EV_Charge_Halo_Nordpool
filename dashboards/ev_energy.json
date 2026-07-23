@@ -47,22 +47,37 @@
                   "type": "horizontal-stack",
                   "cards": [
                     {
-                      "type": "tile",
+                      "type": "button",
                       "entity": "sensor.ev_actual_current",
-                      "name": "Active charging current",
-                      "icon": "mdi:ev-plug-type2",
-                      "show_entity_picture": false,
-                      "hide_state": false,
-                      "vertical": false,
-                      "features_position": "bottom"
+                      "name": "Active current",
+                      "show_icon": false,
+                      "show_name": true,
+                      "show_state": true,
+                      "tap_action": {
+                        "action": "more-info"
+                      }
                     },
                     {
-                      "type": "tile",
+                      "type": "button",
                       "entity": "sensor.sensor_ev_session_energy",
-                      "name": "Session energy charged",
-                      "icon": "mdi:ev-station",
-                      "vertical": false,
-                      "features_position": "bottom"
+                      "name": "Charged",
+                      "show_icon": false,
+                      "show_name": true,
+                      "show_state": true,
+                      "tap_action": {
+                        "action": "more-info"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "entity": "sensor.ev_charger_status",
+                      "name": "Charger",
+                      "show_icon": false,
+                      "show_name": true,
+                      "show_state": true,
+                      "tap_action": {
+                        "action": "more-info"
+                      }
                     }
                   ]
                 },
