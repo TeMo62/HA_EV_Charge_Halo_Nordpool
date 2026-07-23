@@ -32,9 +32,6 @@ docs/operations.md
 docs/v1-baseline.md
 ```
 
-The older Charge Amps blueprint in `blueprints/` is an early historical
-attempt and is not part of the v1 flow.
-
 ## Important
 
 V1 intentionally has no automatic restart fail-safe. A connected vehicle may
