@@ -44,6 +44,29 @@
                   ]
                 },
                 {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "tile",
+                      "entity": "sensor.ev_actual_current",
+                      "name": "Active charging current",
+                      "icon": "mdi:ev-plug-type2",
+                      "show_entity_picture": false,
+                      "hide_state": false,
+                      "vertical": false,
+                      "features_position": "bottom"
+                    },
+                    {
+                      "type": "tile",
+                      "entity": "sensor.sensor_ev_session_energy",
+                      "name": "Session energy charged",
+                      "icon": "mdi:ev-station",
+                      "vertical": false,
+                      "features_position": "bottom"
+                    }
+                  ]
+                },
+                {
                   "type": "entities",
                   "title": "EV Charging Planner - Status",
                   "show_header_toggle": false,
