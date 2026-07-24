@@ -12,6 +12,21 @@ seconds, `switch.ev_charger_available` is turned off. This order is important
 because the Halo normally does not accept availability being disabled while
 charging is in progress.
 
+## Manual evening top-up
+
+The **Evening top-up (90 min)** dashboard button starts charging immediately
+using `input_number.ev_default_night_charge_current`. It does not depend on the
+smart-charging switch, the selected day or night blocks, or the current Nord
+Pool price. After 90 minutes it starts the shared safe-stop script.
+
+The **Stop charging** button can be used at any time. It cancels a running
+evening top-up, turns off `switch.ev_charge_control`, waits 60 seconds, and then
+turns off `switch.ev_charger_available`.
+
+Use the evening top-up outside planned charging windows. If Home Assistant is
+restarted while the 90-minute delay is running, the delayed automatic stop is
+lost and the charger must be checked manually after OCPP reconnects.
+
 ## Restarting Home Assistant
 
 V1 intentionally has no automatic restart fail-safe. The OCPP integration and

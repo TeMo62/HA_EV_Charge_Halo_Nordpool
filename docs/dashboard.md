@@ -19,6 +19,11 @@ The **EV Build Charge Plan** button recalculates the selected day and night
 blocks. **EV Restore Default Values** resets the active targets and charging
 currents to their configured defaults.
 
+**Evening top-up (90 min)** starts charging immediately using the configured
+default night current and requests a safe stop after 90 minutes. **Stop
+charging** cancels an active evening top-up and runs the same Halo-safe stop
+sequence immediately.
+
 ## Nord Pool price chart
 
 ![Nord Pool prices for today and tomorrow](images/dashboard-price-chart.png)
