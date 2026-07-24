@@ -1,0 +1,332 @@
+views:
+  - type: "sections"
+    sections:
+      - type: "grid"
+        cards:
+          - type: "vertical-stack"
+            cards:
+              - type: "horizontal-stack"
+                cards:
+                  - type: "button"
+                    show_name: true
+                    show_icon: false
+                    show_state: false
+                    entity: "automation.ev_build_charge_plan"
+                    name: "EV Build Charge Plan"
+                    tap_action:
+                      action: "perform-action"
+                      perform_action: "automation.trigger"
+                      target:
+                        entity_id: "automation.ev_build_charge_plan"
+                      data:
+                        skip_condition: true
+                  - type: "button"
+                    name: "EV Restore Default Values"
+                    show_name: true
+                    show_icon: false
+                    show_state: false
+                    tap_action:
+                      action: "perform-action"
+                      perform_action: "script.ev_restore_default_values"
+              - type: "horizontal-stack"
+                cards:
+                  - type: "button"
+                    entity: "sensor.ev_actual_current"
+                    name: "Active current"
+                    show_icon: false
+                    show_name: true
+                    show_state: true
+                    tap_action:
+                      action: "more-info"
+                  - type: "button"
+                    entity: "sensor.sensor_ev_session_energy"
+                    name: "Charged"
+                    show_icon: false
+                    show_name: true
+                    show_state: true
+                    tap_action:
+                      action: "more-info"
+                  - type: "button"
+                    entity: "sensor.ev_charger_status"
+                    name: "Charger"
+                    show_icon: false
+                    show_name: true
+                    show_state: true
+                    tap_action:
+                      action: "more-info"
+              - type: "horizontal-stack"
+                cards:
+                  - type: "button"
+                    name: "Evening top-up (90 min)"
+                    show_icon: false
+                    show_name: true
+                    show_state: false
+                    tap_action:
+                      action: "perform-action"
+                      perform_action: "script.ev_evening_top_up"
+                  - type: "button"
+                    name: "Stop charging"
+                    show_icon: false
+                    show_name: true
+                    show_state: false
+                    tap_action:
+                      action: "perform-action"
+                      perform_action: "script.ev_stop_charging"
+              - type: "entities"
+                title: "EV Charging Planner - Status"
+                show_header_toggle: false
+                entities:
+                  - entity: "input_boolean.ev_smart_charging_enabled"
+                    name: "Smart charging enabled"
+                  - entity: "input_number.ev_day_target_kwh"
+                    name: "Day target kWh"
+                  - entity: "input_text.ev_day_selected_charge_block"
+                    name: "Day planned charge window"
+                  - entity: "sensor.ev_day_estimated_charge_cost"
+                    name: "Day estimated cost"
+                  - entity: "binary_sensor.ev_day_charge_recommended_now"
+                    name: "Day charge now"
+                  - type: "divider"
+                  - entity: "input_number.ev_night_target_kwh"
+                    name: "Night target kWh"
+                  - entity: "input_text.ev_night_selected_charge_block"
+                    name: "Night planned charge window"
+                  - entity: "sensor.ev_night_estimated_charge_cost"
+                    name: "Night estimated cost"
+                  - entity: "binary_sensor.ev_night_charge_recommended_now"
+                    name: "Night charge now"
+                  - type: "divider"
+                  - entity: "binary_sensor.ev_charge_recommended_now"
+                    name: "Charge recommended now"
+                  - entity: "switch.ev_charge_control"
+                  - entity: "switch.ev_charger_available"
+                  - entity: "binary_sensor.tomorrow_prices_available"
+                    name: "Tomorrow prices available"
+            grid_options:
+              columns: 15
+              rows: "auto"
+          - square: true
+            type: "grid"
+            cards:
+              - type: "custom:apexcharts-card"
+                header:
+                  show: true
+                  title: "EV Charging - today and tomorrow"
+                  show_states: true
+                  colorize_states: true
+                graph_span: "48h"
+                span:
+                  start: "day"
+                now:
+                  show: true
+                  label: "Now"
+                apex_config:
+                  chart:
+                    type: "bar"
+                    height: 320
+                  plotOptions:
+                    bar:
+                      columnWidth: "90%"
+                  xaxis:
+                    type: "datetime"
+                  yaxis:
+                    decimalsInFloat: 2
+                    title:
+                      text: "SEK/kWh"
+                series:
+                  - entity: "sensor.nordpool_kwh_se3_sek_3_10_025"
+                    attribute: "min"
+                    name: "Min"
+                    yaxis_id: "SEK"
+                    float_precision: 3
+                    show:
+                      in_header: true
+                      in_chart: false
+                    unit: " Kr/kWh"
+                    color: "green"
+                  - entity: "sensor.nordpool_kwh_se3_sek_3_10_025"
+                    attribute: "current_price"
+                    name: "Now"
+                    yaxis_id: "SEK"
+                    float_precision: 3
+                    show:
+                      in_header: true
+                      in_chart: false
+                    unit: " Kr/kWh"
+                    color: "blue"
+                  - entity: "sensor.nordpool_kwh_se3_sek_3_10_025"
+                    attribute: "max"
+                    name: "Max"
+                    yaxis_id: "SEK"
+                    float_precision: 3
+                    show:
+                      in_header: true
+                      in_chart: false
+                    unit: " Kr/kWh"
+                    color: "red"
+                  - entity: "sensor.nordpool_kwh_se3_sek_3_10_025"
+                    name: "Price"
+                    type: "column"
+                    show:
+                      in_header: false
+                      in_chart: true
+                    data_generator: |
+                      const rawToday = entity.attributes.raw_today || [];
+                      const rawTomorrow = entity.attributes.tomorrow_valid
+                        ? (entity.attributes.raw_tomorrow || [])
+                        : [];
+
+                      const dayBlock = hass.states["input_text.ev_day_selected_charge_block"]?.state || "";
+                      const nightBlock = hass.states["input_text.ev_night_selected_charge_block"]?.state || "";
+
+                      function getColor(v) {
+                        if (v <= 0.50) return '#00b050';
+                        if (v <= 1.00) return '#92d050';
+                        if (v <= 1.50) return '#ffd966';
+                        if (v <= 2.00) return '#f4b183';
+                        if (v <= 2.50) return '#ff6666';
+                        return '#cc0000';
+                      }
+
+                      function sameDay(a, b) {
+                        return a.getFullYear() === b.getFullYear()
+                            && a.getMonth() === b.getMonth()
+                            && a.getDate() === b.getDate();
+                      }
+
+                      function inBlock(date, block, targetDate) {
+                        if (!block || !block.includes("–")) return false;
+                        if (!sameDay(date, targetDate)) return false;
+
+                        const [startStr, endStr] = block.split("–");
+                        const [sh, sm] = startStr.split(":").map(Number);
+                        const [eh, em] = endStr.split(":").map(Number);
+
+                        const start = new Date(targetDate);
+                        start.setHours(sh, sm, 0, 0);
+
+                        const end = new Date(targetDate);
+                        end.setHours(eh, em, 0, 0);
+
+                        if (end <= start) {
+                          end.setDate(end.getDate() + 1);
+                        }
+
+                        return date >= start && date < end;
+                      }
+
+                        const now = new Date();
+
+                        const todayTarget = new Date(now);
+                        todayTarget.setHours(12, 0, 0, 0);
+
+                        const tomorrowTarget = new Date(now);
+                        tomorrowTarget.setDate(tomorrowTarget.getDate() + 1);
+                        tomorrowTarget.setHours(12, 0, 0, 0);
+
+                        const tomorrowValid =
+                          entity.attributes.tomorrow_valid === true;
+
+                        const buildPlanState =
+                          hass.states["automation.ev_build_charge_plan"];
+
+                        let buildPlanRanToday = false;
+
+                        if (buildPlanState && buildPlanState.attributes.last_triggered) {
+                          const lastTriggered = new Date(buildPlanState.attributes.last_triggered);
+
+                          buildPlanRanToday =
+                            lastTriggered.getFullYear() === now.getFullYear() &&
+                            lastTriggered.getMonth() === now.getMonth() &&
+                            lastTriggered.getDate() === now.getDate();
+                        }
+
+                        const selectedBlocksAreForTomorrow =
+                          tomorrowValid && buildPlanRanToday;
+
+                        const dayTargetDate =
+                          selectedBlocksAreForTomorrow ? tomorrowTarget : todayTarget;
+
+                        const nightTargetDate =
+                          selectedBlocksAreForTomorrow ? tomorrowTarget : todayTarget;
+
+
+                      return rawToday.concat(rawTomorrow).map((item) => {
+                        const d = new Date(item.start);
+                        let color = getColor(item.value);
+
+                        if (inBlock(d, nightBlock, nightTargetDate)) {
+                          color = '#008ffb';
+                        }
+
+                        if (inBlock(d, dayBlock, dayTargetDate)) {
+                          color = '#008ffb';
+                        }
+
+                        return {
+                          x: d.getTime(),
+                          y: item.value,
+                          fillColor: color
+                        };
+                      });
+
+                  - entity: "input_datetime.ev_plan_last_updated"
+                    name: "Plan Refresh"
+                    show:
+                      in_header: false
+                      in_chart: false
+            columns: 1
+            grid_options:
+              rows: "auto"
+              columns: 15
+        column_span: 2
+    max_columns: 4
+    title: "Status"
+    cards:
+
+  - type: "sections"
+    max_columns: 4
+    title: "Settings"
+    path: "settings"
+    sections:
+      - type: "grid"
+        cards:
+          - show_name: true
+            show_icon: false
+            type: "button"
+            name: "EV Restore Default Values"
+            tap_action:
+              action: "perform-action"
+              perform_action: "script.ev_restore_default_values"
+            grid_options:
+              columns: 15
+              rows: 1
+          - type: "vertical-stack"
+            cards:
+              - type: "entities"
+                title: "EV Charging Planner - Settings"
+                entities:
+                  - entity: "input_number.ev_default_day_target_kwh"
+                    name: "Default day target kWh"
+                  - entity: "input_number.ev_default_night_target_kwh"
+                    name: "Default night target kWh"
+                  - entity: "input_number.ev_default_day_charge_current"
+                    name: "Default day charge current"
+                  - entity: "input_number.ev_default_night_charge_current"
+                    name: "Default night charge current"
+                  - entity: "input_number.ev_day_charge_current"
+                    name: "Day charge current"
+                  - entity: "input_number.ev_night_charge_current"
+                    name: "Night charge current"
+                  - entity: "input_datetime.ev_day_window_start"
+                    name: "Day window start"
+                  - entity: "input_datetime.ev_day_window_end"
+                    name: "Day window end"
+                  - entity: "input_datetime.ev_night_window_start"
+                    name: "Night window start"
+                  - entity: "input_datetime.ev_night_window_end"
+                    name: "Night window end"
+            grid_options:
+              columns: 15
+              rows: "auto"
+        column_span: 2

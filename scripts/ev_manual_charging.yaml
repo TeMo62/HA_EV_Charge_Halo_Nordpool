@@ -1,0 +1,45 @@
+ev_stop_charging:
+  alias: EV Stop Charging
+  description: Safely stop charging and cancel an active evening top-up.
+  icon: mdi:stop-circle-outline
+  mode: single
+  max_exceeded: silent
+  sequence:
+    - action: script.turn_off
+      target:
+        entity_id: script.ev_evening_top_up
+    - action: switch.turn_off
+      target:
+        entity_id: switch.ev_charge_control
+    - delay: "00:01:00"
+    - action: switch.turn_off
+      target:
+        entity_id: switch.ev_charger_available
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.ev_max_charge_current
+      data:
+        value: >-
+          {{ states('input_number.ev_default_night_charge_current') | int(10) }}
+
+ev_evening_top_up:
+  alias: EV Evening Top-up
+  description: Start charging immediately and stop safely after 90 minutes.
+  icon: mdi:battery-plus
+  mode: single
+  max_exceeded: silent
+  sequence:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.ev_max_charge_current
+      data:
+        value: >-
+          {{ states('input_number.ev_default_night_charge_current') | int(10) }}
+    - delay: "00:00:05"
+    - action: switch.turn_on
+      target:
+        entity_id: switch.ev_charger_available
+    - delay: "01:30:00"
+    - action: script.turn_on
+      target:
+        entity_id: script.ev_stop_charging

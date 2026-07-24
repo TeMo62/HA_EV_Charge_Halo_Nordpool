@@ -13,6 +13,8 @@ V1 baseline of the Home Assistant solution that was in active operation on
 - stop in the Halo-safe order: `charge_control`, 60 seconds, `availability`
 - restore default values after the day session
 - estimated cost and EV dashboard
+- manual 90-minute evening top-up
+- manual stop using the Halo-safe shutdown order
 
 See [dashboard screenshots and descriptions](docs/dashboard.md) for the status,
 price chart, and settings views.
@@ -25,7 +27,8 @@ config/ev_helpers.yaml              helpers and v1 initial values
 config/ev_templates.yaml            OCPP wrappers and active charging window
 config/ev_cost_templates.yaml       estimated cost
 scripts/ev_restore_default_values.yaml
-dashboards/ev_energy.json           dashboard export
+scripts/ev_manual_charging.yaml     evening top-up and manual stop
+dashboards/ev_energy.yaml           dashboard export
 docs/dashboard.md
 docs/installation.md
 docs/operations.md
